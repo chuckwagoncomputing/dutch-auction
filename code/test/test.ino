@@ -1,0 +1,104 @@
+#include <Arduino.h>
+
+extern "C" {
+ #include <espnow.h>
+ #include <user_interface.h>
+}
+
+#define CHANNEL 1
+
+os_timer_t scan_timer;
+volatile bool should_scan = true;
+
+os_timer_t send_timer;
+volatile bool should_send = true;
+
+volatile bool ready_for_failure = true;
+volatile bool prep_for_failure = true;
+
+uint8_t bogus[6] = { 0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe };
+uint8_t message[4] = { 0xba, 0x1d, 0xba, 0xbe };
+
+void ICACHE_FLASH_ATTR scanTimerCallback(void* arg) {
+ should_scan = true;
+}
+
+void ICACHE_FLASH_ATTR sendTimerCallback(void* arg) {
+ should_send = true;
+}
+
+void ICACHE_FLASH_ATTR scanned(void* arg, STATUS status) {
+ if (status == OK) {
+  struct bss_info* ap_link = (struct bss_info *)arg;
+  while (ap_link != NULL) {
+   String ssid = (const char*)ap_link->ssid;
+   if (ssid.substring(0, 4) == "ESP_") {
+    Serial.println("Found AP " + ssid);
+    esp_now_add_peer(ap_link->bssid, ESP_NOW_ROLE_SLAVE, CHANNEL, NULL, 0);
+   }
+   ap_link = STAILQ_NEXT(ap_link, next);
+  }
+ }
+}
+
+void ICACHE_FLASH_ATTR scan() {
+ struct scan_config config;
+ config.ssid = NULL;
+ config.bssid = NULL;
+ config.channel = CHANNEL;
+ wifi_station_scan(&config, scanned);
+}
+
+void ICACHE_FLASH_ATTR sent(unsigned char* mac, unsigned char status) {
+ Serial.print(".");
+ if (mac[0] == 0xde) {
+  ready_for_failure = false;
+  return;
+ }
+ else if ((status == 0 && ready_for_failure) || (status != 0 && !ready_for_failure)) {
+  Serial.println("Out of order.");
+ }
+ if (status == 0) {
+  ready_for_failure = true;
+ }
+ else {
+  ready_for_failure = false;
+ }
+}
+
+void ICACHE_FLASH_ATTR receive(unsigned char* mac, unsigned char* data, uint8_t len) {
+
+}
+
+void ICACHE_FLASH_ATTR setup() {
+ Serial.begin(115200);
+ Serial.println("Starting");
+ wifi_set_opmode(3);
+ wifi_set_channel(CHANNEL);
+ esp_now_init();
+ esp_now_register_send_cb(reinterpret_cast<esp_now_send_cb_t>(&sent));
+ esp_now_register_recv_cb(reinterpret_cast<esp_now_recv_cb_t>(&receive));
+ esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
+ os_timer_setfn(&scan_timer, scanTimerCallback, NULL);
+ os_timer_arm(&scan_timer, 5000, true);
+ os_timer_setfn(&send_timer, sendTimerCallback, NULL);
+ os_timer_arm(&send_timer, 100, true);
+}
+
+void ICACHE_FLASH_ATTR loop() {
+ if (should_scan) {
+  scan();
+  should_scan = false;
+ }
+ if (should_send) {
+  if (prep_for_failure) {
+   esp_now_send(bogus, message, 4);
+   prep_for_failure = false;
+  }
+  else {
+   esp_now_send(NULL, message, 4);
+   prep_for_failure = true;
+  }
+  should_send = false;
+ }
+}

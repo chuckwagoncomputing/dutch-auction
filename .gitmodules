@@ -1,0 +1,9 @@
+[submodule "code/controller/libraries/NeoPixelBus"]
+	path = code/controller/libraries/NeoPixelBus
+	url = git@github.com:Makuna/NeoPixelBus.git
+[submodule "code/controller/libraries/NowMesh"]
+	path = code/controller/libraries/NowMesh
+	url = git@github.com:chuckwagoncomputing/NowMesh.git
+[submodule "code/remote/libraries/NowMesh"]
+	path = code/remote/libraries/NowMesh
+	url = git@github.com:chuckwagoncomputing/NowMesh.git
