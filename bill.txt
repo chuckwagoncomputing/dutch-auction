@@ -1,0 +1,20 @@
+Digikey order #: 48842083 Invoice #: 55996674
+  Shipping $3.40
+
+DigiKey order #: 48851318 Invoice #: 56006383
+  Shipping $2.83
+
+Digikey order #: 48855546
+  Shipping $3.40
+
+Ebay:
+  Shipping $1.50
+
+Digikey order #: 49048522 Invoice #: 56234135
+ Shipping $9.49
+
+Digikey order #: 49116339 Invoice #: 56307445
+ Shipping: $6.95
+
+DirtyPCBs order #: 2030165
+ Shipping $7.00
